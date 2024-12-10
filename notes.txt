@@ -1,0 +1,279 @@
+1.	mongodb compass ======> download & install
+
+2.	open folder in VS code
+
+3.	in terminal run these commands:
+npm init
+enter yes yes
+npm install
+npm i node
+npm i nodemon
+npm i express
+
+4.	in package.json in script write this:
+"start" : "node index.js"  //you can change index with any other file name
+
+5.	now create a file having same name as written in pakage.json. As, I have written "start" : "node index.js" so, I'll create the file named index.js
+
+6.	in index.js write these lines:
+const express = require('express')
+const User = require('./models/userShema')
+const app = express()
+app.use(express.json())		//a middleware that will accept the data only in json formatt 
+app.get('/',(req,res)=>{
+res.json('hello')
+})
+app.get('/user',(req,res)=>{
+res.json('hi')
+})
+
+app.listen(3000, (req,res)=>{
+console.log('server id=s start')
+})
+
+now create a folder models having a file userSchema to store the schema of user, and write this code:
+const mongoose = require("mongoose")
+const userSchema = new mongoose.Schema({
+    name : String,
+    email : String,
+    password : String,
+    age : Number
+})
+module.exports = mongoose.model('User' , userSchema)
+
+
+7.	Now Install the windows version of postman which is used to check the APIs(GET, PUT, PATCH, DELETE, etc)
+open the postman
+click on workspaces tab and choose my workspace 
+create a collection and then click on new (button) on left side pannel
+choose HTTP
+use the api you want to test and paste the url there 
+http://localhost:3000/user	(if required you can change the port number)
+Now click on send button 
+You'll get your respond
+
+8.	Now install mongodb community server in your PC
+open MongoDB
+click on + symbol to create a connection 
+just enter the name and click save & connect button
+now open the folder on left pannel here & look for all the schemas & open it.
+
+9.	in postman select post api to enter data
+select body > raw > json 
+enter data in json formatt & send the request
+
+10.	the data will be stored in mongoDB with unique ID
+
+11.	install cors in backend:
+    npm I cors
+
+12.	write this middleware in index.js in backend:
+   app.use(cors())
+
+13.	create a folder models to store all the schemas in it. Now create a file in this folder named userSchema to write the following code:
+    const User = require('../models/userSchema')
+
+const creatUser = async (req, res) => {
+    try {
+        const body = req.body
+        const user = new User(body)
+        user.save()
+        res.status(200).json({ message: "User is created", user: user })
+    }
+    catch (err) {
+        res.status(404).json(err)
+    }
+}
+const getUser = async (req, res) => {
+    try {
+        const userData = await User.find()
+        res.status(200).json({ message: "User is fetch", user: userData })
+    }
+    catch (err) {
+        res.status(404).json(err)
+    }
+}
+
+const deleteUser = async (req, res) => {
+    try {
+        const id = req.params.id
+        const user = await User.findByIdAndDelete(id)
+        res.status(200).json({ message: "User is deleted" })
+    }
+    catch (err) {
+        res.status(404).json(err)
+    }
+}
+
+const updateUser = async (req, res) => {
+    try {
+        const id = req.params.id
+        const user = await User.findByIdAndUpdate(id, req.body)
+        user.save()
+        res.status(200).json({ message: "User is Updated" })
+    }
+    catch (err) {
+        res.status(404).json(err)
+    }
+}
+module.exports = { creatUser, getUser, deleteUser, updateUser }
+
+14.	create another folder Routes to store all routings in it. Now create a file userRoutes to implement the following code:
+const express = require('express')
+const { getUser, creatUser, deleteUser, updateUser } = require('../controller/userController')
+const routes = express.Router()
+
+routes.post('/', creatUser)
+routes.get('/', getUser)
+routes.delete('/:id', deleteUser)
+routes.patch('/:id', updateUser)
+
+module.exports = routes
+
+15.	in index.js write this:
+const express = require('express')
+const mongoose = require('mongoose')
+const cors = require('cors')
+const userRoutes = require("./routes/userRoutes")
+const app = express()
+app.use(express.json())
+app.use(cors())
+app.use('/user' ,userRoutes )
+app.listen(3001, (req,res)=>{
+    console.log('Server Started')
+})
+const mongoURL = "mongodb://localhost:27017/mybackend"                  // change the mybackend with the name of your folder created in mongodb
+mongoose.connect(mongoURL).then(()=>{
+    console.log("Database connected")
+}).catch((err)=>{
+    console.log(err)
+})
+
+16.	Now run this command to start the server in the terminal of backend:
+npm start
+
+17.	Create a form in frontend folder:
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
+function Register() {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [id, setId] = useState('')
+  const [age, setAge] = useState('')
+  const [userSave, setUserSave] = useState([])
+  const [edit, setEdit] = useState(false)
+
+  const getData = async () => {
+    try {
+      const userData = await axios.get("http://localhost:3001/user")
+      setUserSave(userData?.data?.user)
+    }
+    catch (err) {
+      console.log(err)
+    }
+  }
+
+  useEffect(() => {
+
+    getData()
+
+  }, [])
+  const handleSubmit = async () => {
+    console.log("Function is working")
+    const body = {
+      name: name,
+      email: email,
+      password: password,
+      age: age
+    }
+    try {
+      const userData = await axios.post("http://localhost:3001/user", body)
+      if (userData) {
+        alert(userData.data.message)
+        // getData()
+      }
+    }
+    catch (err) {
+      console.log(err)
+    }
+  }
+
+
+  const handleDelete = async (id) => {
+    console.log(id)
+    try {
+      const deleteUser = await axios.delete(`http://localhost:3001/user/${id}`)
+      if (deleteUser) {
+        alert(deleteUser.data.message)
+        getData()
+      }
+    }
+    catch (err) {
+      console.log(err)
+    }
+  }
+  const handleModel = (data) => {
+    setEdit(true)
+    setName(data.name)
+    setEmail(data.email)
+    setPassword(data.password)
+    setAge(data.age)
+    setId(data._id)
+  }
+  const handleUpdate = async (id) => {
+    console.log(id)
+    const body = {
+      name: name,
+      email: email,
+      password: password,
+      age: age
+    }
+    try {
+      const updateUser = await axios.patch(`http://localhost:3001/user/${id}`, body)
+      if (updateUser) {
+        alert(updateUser.data.message)
+        getData()
+      }
+    }
+    catch (err) {
+      console.log(err)
+    }
+  }
+
+  return (
+    <>
+      <input type="text" placeholder='name' onChange={(e) => setName(e.target.value)} />
+      <input type="email" placeholder='email' onChange={(e) => setEmail(e.target.value)} />
+      <input type="password" placeholder='password' onChange={(e) => setPassword(e.target.value)} />
+      <input type="text" placeholder='age' onChange={(e) => setAge(e.target.value)} />
+      <button onClick={() => handleSubmit}>Submit</button>
+
+      {userSave.map((data, index) => (
+        <div key={index}>
+          <h1>{data.name}</h1>
+          <p>{data.email}</p>
+          <p>{data.password}</p>
+          <p>{data.age}</p>
+          <button onClick={() => handleDelete(data._id)}>Delete</button>
+          <button onClick={() => handleModel(data)}>Update</button>
+        </div>
+      ))}
+
+      {edit && <>
+        <input type="text" placeholder='name' value={name} onChange={(e) => setName(e.target.value)} />
+        <input type="email" placeholder='email' value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input type="password" placeholder='password' value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input type="text" placeholder='age' value={age} onChange={(e) => setAge(e.target.value)} />
+        <button onClick={() => handleUpdate(id)}>Submit</button>
+      </>}
+
+    </>
+  )
+}
+
+export default Register
+
+18.	start the frontend server
+
+19.	now fill all the input fields & submit the form. Here you got all the users details on the browser. Click on all buttons to check your code.
